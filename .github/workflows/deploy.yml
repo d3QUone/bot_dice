@@ -1,0 +1,34 @@
+name: Deployment
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deployment:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Deploy Production
+      uses: appleboy/ssh-action@v0.1.2
+      env:
+        PATH: "/root/.poetry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games"
+      with:
+        host: ${{ secrets.SERVER_HOSTNAME }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        key: ${{ secrets.ID_RSA_PRIVATE }}
+        envs: PATH,TG_TOKEN,SENTRY_TOKEN,FUCK
+        script_stop: true
+        script: |
+          echo ">> Download Code"
+          cd /home/vladimir/bot_dice/
+          git fetch && git checkout -f origin/master
+
+          echo ">> Install Packages"
+          poetry install
+
+          echo ">> Restart App"
+          systemctl restart bot_dice
+
+          echo ">> Check is alive"
+          sleep 3
+          systemctl is-active --quiet bot_dice

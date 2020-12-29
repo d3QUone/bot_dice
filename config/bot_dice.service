@@ -1,0 +1,16 @@
+[Unit]
+Description=Telegram Dice Bot
+After=network.target
+
+[Service]
+User=vladimir
+Group=vladimir
+
+WorkingDirectory=/home/vladimir/bot_dice/
+Environment="PYTHONPATH=/home/vladimir/bot_dice/"
+Environment="TG_TOKEN=XXX1"
+Environment="SENTRY_TOKEN=XXX2"
+ExecStart=/root/.cache/pypoetry/virtualenvs/bot-dice-0l3MhL1W-py3.8/bin/python /home/vladimir/bot_dice/src/bot.py
+
+[Install]
+WantedBy=multi-user.target
