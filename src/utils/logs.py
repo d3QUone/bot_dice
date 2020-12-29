@@ -1,5 +1,15 @@
+import logging
+
+import sentry_sdk
+
 from functools import wraps
 from typing import Union
+
+
+logging.basicConfig(
+    level=logging.DEBUG,
+)
+log = logging.getLogger(__name__)
 
 
 def async_log_exception(f):
@@ -9,8 +19,8 @@ def async_log_exception(f):
         try:
             return await f(*args, **kwargs)
         except Exception as e:
-            # TODO: sentry
-            print(f'Exception in {f.__name__}: {e}')
+            sentry_sdk.capture_exception(error=e)
+            log.error(f'Exception in {f.__name__}: {e}')
 
     return inner
 

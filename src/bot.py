@@ -6,6 +6,7 @@ from collections import defaultdict
 from functools import wraps
 
 import asyncio
+import sentry_sdk
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters import Command, IDFilter
 from aiogram.dispatcher.filters.filters import AndFilter
@@ -33,7 +34,7 @@ log = logging.getLogger(__name__)
 
 class Manager:
 
-    def __init__(self, token: str):
+    def __init__(self, token: str, sentry_token: str = None):
         self.bot = Bot(
             token=token,
             timeout=3.0,
@@ -41,6 +42,11 @@ class Manager:
         self.dispatcher = Dispatcher(
             bot=self.bot,
         )
+        sentry_sdk.init(
+            dsn=sentry_token,
+            traces_sample_rate=1.0,
+        )
+
         # Game rules
         self.board = LeaderBoard()
         self.update_cycle = 0
@@ -266,6 +272,7 @@ class Manager:
             parse_mode=types.ParseMode.MARKDOWN,
         )
 
+    @async_log_exception
     async def show_user_info(self, message: types.Message):
         text = [
             '*Информация об аккаунте*',
@@ -278,6 +285,7 @@ class Manager:
             parse_mode=types.ParseMode.MARKDOWN,
         )
 
+    @async_log_exception
     async def show_help(self, message: types.Message):
         text = [
             '*Боулинг*',
@@ -304,6 +312,7 @@ class Manager:
             parse_mode=types.ParseMode.MARKDOWN,
         )
 
+    @async_log_exception
     async def show_stats(self, message: types.Message):
         if not self.func_counter:
             return await message.reply(
@@ -349,6 +358,8 @@ class Manager:
 if __name__ == '__main__':
     TG_TOKEN = os.getenv('TG_TOKEN')
     assert TG_TOKEN, 'TG_TOKEN env variable must be set!'
+
+    SENTRY_TOKEN = os.getenv('SENTRY_TOKEN')
 
     m = Manager(
         token=TG_TOKEN,

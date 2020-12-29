@@ -25,6 +25,7 @@ poetry run python src/bot.py
 You need the following `secrets` in your repository settings:
 
 - `TG_TOKEN` -- bot token from BotFather.
+- `SENTRY_TOKEN` -- Sentry token for your bot (optional).
 - `SERVER_HOSTNAME` -- your server host name or IP address.
 - `SERVER_USERNAME` -- your server user name.
 - `ID_RSA_PRIVATE` -- your `~/.ssh/id_rsa` file contents to access server under provided user name.
