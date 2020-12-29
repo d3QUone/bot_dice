@@ -315,7 +315,7 @@ class Manager:
     @async_log_exception
     async def show_stats(self, message: types.Message):
         if not self.func_counter:
-            return await message.reply(
+            return await message.answer(
                 text='Сейчас тут ничего нет.',
             )
 
