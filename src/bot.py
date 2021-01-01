@@ -59,6 +59,10 @@ class Manager:
         self.func_resp_time = defaultdict(list)  # milliseconds
         self.max_list_size = 1000
 
+    async def on_shutdown(self, dispatcher: Dispatcher):
+        log.debug('Dump data')
+        self.board.dump_data()
+
     def run(self):
         self.set_up_commands()
 
@@ -67,6 +71,7 @@ class Manager:
         executor.start_polling(
             dispatcher=self.dispatcher,
             skip_updates=True,
+            on_shutdown=self.on_shutdown,
         )
 
     def increment_counter(self, f):

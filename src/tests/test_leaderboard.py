@@ -13,7 +13,9 @@ class LeaderBoardTestCase(TestCase):
 
     @freeze_time('2020-12-19T12:00:00.0000')
     def test_first_add_users(self):
-        board = LeaderBoard()
+        board = LeaderBoard(
+            dry_run=True,
+        )
         pos = board.add_result(chat_id=1, full_name='F1', score=1)
         self.assertEqual(pos, 1)
 
@@ -76,13 +78,16 @@ class LeaderBoardTestCase(TestCase):
 
     @freeze_time('2020-12-19T12:00:00.0000')
     def test_time_left(self):
-        board = LeaderBoard()
+        board = LeaderBoard(
+            dry_run=True,
+        )
         self.assertEqual(board.time_left, 120.0)
 
     def test_result_expire(self):
         board = LeaderBoard(
             round_duration=timedelta(seconds=10),
             expire_delta=timedelta(seconds=20),
+            dry_run=True,
         )
         board.add_result(chat_id=1, full_name='FUU', score=10)
 

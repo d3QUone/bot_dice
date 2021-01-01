@@ -1,10 +1,12 @@
-import datetime
 import time
 import threading
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from itertools import chain
 from typing import List, Tuple, Optional
+
+from src.utils.storage import Storage
 
 
 class BoardException(Exception):
@@ -24,7 +26,7 @@ class LeaderItem:
     created_at: float
 
     def __str__(self) -> str:
-        created_at = datetime.datetime.fromtimestamp(self.created_at).strftime('%H:%M %d.%m.%Y')
+        created_at = datetime.fromtimestamp(self.created_at).strftime('%H:%M %d.%m.%Y')
         return f'[[{self.full_name}]] - *{self.score}* - {created_at}'
 
 
@@ -45,16 +47,19 @@ def sort_board(array: List[LeaderItem]) -> List[LeaderItem]:
 class LeaderBoard:
     """LeaderBoard представляет основную и единую логику таблицы рекордов."""
 
-    def __init__(self, round_duration: datetime.timedelta = None, expire_delta: datetime.timedelta = None):
-        self.last_game: List[LeaderItem] = []
-        self.last_day: List[LeaderItem] = []
+    def __init__(self, round_duration: timedelta = None, expire_delta: timedelta = None, dry_run: bool = False):
+        self.last_game_storage = Storage(filename='last_game', klass=LeaderItem, dry_run=dry_run)
+        self.last_game: List[LeaderItem] = self.last_game_storage.load()
+
+        self.last_day_storage = Storage(filename='last_day', klass=LeaderItem, dry_run=dry_run)
+        self.last_day: List[LeaderItem] = self.last_day_storage.load()
 
         # Какое кол-во рекордов отображать в статистике
         self.visible_leader_board = 10
         # Длительность раунда
-        self.round_duration = round_duration or datetime.timedelta(minutes=2)
+        self.round_duration = round_duration or timedelta(minutes=2)
         # Срок жизни результатов
-        self.expire_delta = expire_delta or datetime.timedelta(hours=24)
+        self.expire_delta = expire_delta or timedelta(hours=24)
         # Сколько раундов прошло
         self.round_counter = 0
         # Время последнего обновления
@@ -68,10 +73,16 @@ class LeaderBoard:
                 time.sleep(self.round_duration.total_seconds())
 
                 self.new_round()
+                self.dump_data()
                 self.last_update = time.time()
 
         t = threading.Thread(target=inner, daemon=True)
         t.start()
+
+    def dump_data(self):
+        """Сохранить промежуточные результаты."""
+        self.last_game_storage.save(objs=self.last_game)
+        self.last_day_storage.save(objs=self.last_day)
 
     @property
     def time_left(self) -> float:
