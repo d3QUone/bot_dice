@@ -176,9 +176,9 @@ class Manager:
         # Roll
         rolls = [await message.answer_dice(emoji='🎳') for _ in range(3)]
 
-        val = 1
+        score = 1
         for v in rolls:
-            val *= v["dice"]["value"]
+            score *= v["dice"]["value"]
 
         # Wait for animation
         await asyncio.sleep(3)
@@ -186,11 +186,11 @@ class Manager:
         pos = self.board.add_result(
             chat_id=chat_id,
             full_name=message.chat.full_name,
-            result=val,
+            score=score,
         )
 
         text = [
-            f'Ваш результат: *{val}*',
+            f'Ваш результат: *{score}*',
             f'Прямо сейчас вы на позиции *{pos}*',
             '',
             f'Посмотреть итоги раунда: /{COMMAND_ROUND_LEADERS}',
@@ -218,7 +218,7 @@ class Manager:
 
         for pos, item in stats:
             msg_pos = f'*{pos}*' if pos <= 3 else f'{pos}'
-            msg = f'{msg_pos}. [[{item["full_name"]}]] {item["result"]}'
+            msg = f'{msg_pos}. {item}'
             text.append(msg)
 
         dt = self.board.time_left
@@ -250,7 +250,7 @@ class Manager:
 
         for pos, item in stats:
             msg_pos = f'*{pos}*' if pos <= 3 else f'{pos}'
-            msg = f'{msg_pos}. [[{item["full_name"]}]] {item["result"]}'
+            msg = f'{msg_pos}. {item}'
             text.append(msg)
 
         await message.answer(

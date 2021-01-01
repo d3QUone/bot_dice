@@ -2,8 +2,9 @@ import datetime
 import time
 import threading
 from collections import defaultdict
+from dataclasses import dataclass
 from itertools import chain
-from typing import List, TypedDict, Tuple, Optional
+from typing import List, Tuple, Optional
 
 
 class BoardException(Exception):
@@ -14,12 +15,16 @@ class BoardUserAlreadyExists(BoardException):
     """Нельзя добавлять юзера повторно когда он уже принял участие в раунде."""
 
 
-class LeaderItem(TypedDict):
+@dataclass
+class LeaderItem:
     """LeaderItem представляет одного пользователя в таблице рекордов."""
     chat_id: int
     full_name: str
-    result: int
+    score: int
     created_at: float
+
+    def __str__(self) -> str:
+        return f'[[{self.full_name}]] {self.score}'
 
 
 POS_NOT_FOUND = -1
@@ -27,13 +32,13 @@ POS_NOT_FOUND = -1
 
 def find_user_pos(array: List[LeaderItem], chat_id: int) -> Tuple[int, Optional[LeaderItem]]:
     for pos, item in enumerate(array):
-        if item['chat_id'] == chat_id:
+        if item.chat_id == chat_id:
             return pos + 1, item
     return POS_NOT_FOUND, None
 
 
 def sort_board(array: List[LeaderItem]) -> List[LeaderItem]:
-    return sorted(array, key=lambda i: (i['result'], i['created_at']), reverse=True)
+    return sorted(array, key=lambda i: (i.score, i.created_at), reverse=True)
 
 
 class LeaderBoard:
@@ -82,7 +87,7 @@ class LeaderBoard:
         """Может ли пользователь участвовать в текущем раунде."""
         return self.user_stats(chat_id=chat_id) == POS_NOT_FOUND
 
-    def add_result(self, chat_id: int, full_name: str, result: int) -> int:
+    def add_result(self, chat_id: int, full_name: str, score: int) -> int:
         """Добавить результат в общую таблицу, и вернуть место пользователя в текущем раунде."""
         if not self.can_add_result(chat_id=chat_id):
             raise BoardUserAlreadyExists
@@ -90,7 +95,7 @@ class LeaderBoard:
         item = LeaderItem(
             chat_id=chat_id,
             full_name=full_name,
-            result=result,
+            score=score,
             created_at=time.time(),
         )
         self.last_game.append(item)
@@ -110,9 +115,9 @@ class LeaderBoard:
 
         games_dict = defaultdict(list)
         for i in chain(self.last_day, self.last_game):
-            games_dict[i['chat_id']].append(i)
+            games_dict[i.chat_id].append(i)
 
-        self.last_day = sort_board([max(group, key=lambda i: i['result']) for group in games_dict.values()])
+        self.last_day = sort_board([max(group, key=lambda i: i.score) for group in games_dict.values()])
         self.last_game = []
 
         self.round_counter += 1

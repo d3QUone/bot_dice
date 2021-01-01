@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from datetime import timedelta
 from unittest import TestCase
 
@@ -12,15 +13,15 @@ class LeaderBoardTestCase(TestCase):
     @freeze_time('2020-12-19T12:00:00.0000')
     def test_first_add_users(self):
         board = LeaderBoard()
-        pos = board.add_result(chat_id=1, full_name='F1', result=1)
+        pos = board.add_result(chat_id=1, full_name='F1', score=1)
         self.assertEqual(pos, 1)
 
         # Нельзя добавлять того же юзера
         with self.assertRaises(BoardUserAlreadyExists):
-            board.add_result(chat_id=1, full_name='F1', result=1)
+            board.add_result(chat_id=1, full_name='F1', score=1)
 
         # Результат обновился
-        pos = board.add_result(chat_id=2, full_name='F2', result=2)
+        pos = board.add_result(chat_id=2, full_name='F2', score=2)
         self.assertEqual(pos, 1)
 
         # Первый юзер сдвинулся
@@ -34,22 +35,22 @@ class LeaderBoardTestCase(TestCase):
         self.assertEqual(len(stats), 2)
 
         self.assertEqual(stats[0][0], 1)
-        self.assertDictEqual(stats[0][1], {
+        self.assertDictEqual(asdict(stats[0][1]), {
             'chat_id': 2,
             'full_name': 'F2',
-            'result': 2,
+            'score': 2,
             'created_at': 1608379200.0,
         })
         self.assertEqual(stats[1][0], 2)
-        self.assertDictEqual(stats[1][1], {
+        self.assertDictEqual(asdict(stats[1][1]), {
             'chat_id': 1,
             'full_name': 'F1',
-            'result': 1,
+            'score': 1,
             'created_at': 1608379200.0,
         })
 
         # Поставить новый рекорд
-        pos = board.add_result(chat_id=1, full_name='FUU', result=10)
+        pos = board.add_result(chat_id=1, full_name='FUU', score=10)
         self.assertEqual(pos, 1)
 
         board.new_round()
@@ -58,17 +59,17 @@ class LeaderBoardTestCase(TestCase):
         self.assertEqual(len(stats), 2)
 
         self.assertEqual(stats[0][0], 1)
-        self.assertDictEqual(stats[0][1], {
+        self.assertDictEqual(asdict(stats[0][1]), {
             'chat_id': 1,
             'full_name': 'FUU',
-            'result': 10,
+            'score': 10,
             'created_at': 1608379200.0,
         })
         self.assertEqual(stats[1][0], 2)
-        self.assertDictEqual(stats[1][1], {
+        self.assertDictEqual(asdict(stats[1][1]), {
             'chat_id': 2,
             'full_name': 'F2',
-            'result': 2,
+            'score': 2,
             'created_at': 1608379200.0,
         })
 
@@ -82,7 +83,7 @@ class LeaderBoardTestCase(TestCase):
             round_duration=timedelta(seconds=10),
             expire_delta=timedelta(seconds=20),
         )
-        board.add_result(chat_id=1, full_name='FUU', result=10)
+        board.add_result(chat_id=1, full_name='FUU', score=10)
 
         # Обновить результаты
         for _ in range(2):
