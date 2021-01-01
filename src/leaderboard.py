@@ -24,7 +24,8 @@ class LeaderItem:
     created_at: float
 
     def __str__(self) -> str:
-        return f'[[{self.full_name}]] {self.score}'
+        created_at = datetime.datetime.fromtimestamp(self.created_at).strftime('%H:%M %d.%m.%Y')
+        return f'[[{self.full_name}]] - *{self.score}* - {created_at}'
 
 
 POS_NOT_FOUND = -1

@@ -1,10 +1,11 @@
+import time
 from dataclasses import asdict
 from datetime import timedelta
 from unittest import TestCase
 
 from freezegun import freeze_time
 
-from src.leaderboard import LeaderBoard, BoardUserAlreadyExists
+from src.leaderboard import LeaderBoard, LeaderItem, BoardUserAlreadyExists
 
 
 class LeaderBoardTestCase(TestCase):
@@ -95,3 +96,13 @@ class LeaderBoardTestCase(TestCase):
         board.new_round()
         stats = board.total_stats()
         self.assertEqual(len(stats), 0)
+
+    @freeze_time('2020-12-19T12:00:00.0000')
+    def test_leader_item(self):
+        item = LeaderItem(
+            chat_id=1,
+            full_name='Vladimir Kasatkin',
+            score=123,
+            created_at=time.time(),
+        )
+        self.assertEqual(str(item), '[[Vladimir Kasatkin]] - *123* - 12:00 19.12.2020')
