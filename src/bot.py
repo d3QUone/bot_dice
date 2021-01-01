@@ -3,6 +3,7 @@ import time
 import os
 from collections import defaultdict
 from functools import wraps
+from typing import Callable
 
 import asyncio
 import sentry_sdk
@@ -201,10 +202,9 @@ class Manager:
             parse_mode=types.ParseMode.MARKDOWN,
         )
 
-    @async_log_exception
-    async def roll_stats_round(self, message: types.Message):
+    async def abc_roll_stats_round(self, stats_func: Callable, header: str, message: types.Message):
         chat_id = message.chat.id
-        stats = self.board.current_stats(chat_id=chat_id)
+        stats = stats_func(chat_id=chat_id)
         if not stats:
             return await message.answer(
                 text='Пока что ничего нет.',
@@ -212,7 +212,7 @@ class Manager:
             )
 
         text = [
-            '*Текущий раунд*',
+            header,
             '',
         ]
 
@@ -225,7 +225,7 @@ class Manager:
         if dt > 0:
             text.extend([
                 '',
-                f'Новый раунд через: {pretty_time_delta(dt)}',
+                f'Следующий раунд через: {pretty_time_delta(dt)}',
             ])
 
         await message.answer(
@@ -234,28 +234,19 @@ class Manager:
         )
 
     @async_log_exception
+    async def roll_stats_round(self, message: types.Message):
+        return await self.abc_roll_stats_round(
+            stats_func=self.board.current_stats,
+            header='*Текущий раунд*',
+            message=message,
+        )
+
+    @async_log_exception
     async def roll_stats_total(self, message: types.Message):
-        chat_id = message.chat.id
-        stats = self.board.total_stats(chat_id=chat_id)
-        if not stats:
-            return await message.answer(
-                text='Пока что ничего нет.',
-                parse_mode=types.ParseMode.MARKDOWN,
-            )
-
-        text = [
-            '*Лучшие результаты за всё время*',
-            '',
-        ]
-
-        for pos, item in stats:
-            msg_pos = f'*{pos}*' if pos <= 3 else f'{pos}'
-            msg = f'{msg_pos}. {item}'
-            text.append(msg)
-
-        await message.answer(
-            text=prepare_str(text=text),
-            parse_mode=types.ParseMode.MARKDOWN,
+        return await self.abc_roll_stats_round(
+            stats_func=self.board.total_stats,
+            header='*Лучшие результаты за сутки*',
+            message=message,
         )
 
     @async_log_exception
