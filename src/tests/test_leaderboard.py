@@ -70,3 +70,8 @@ class LeaderBoardTestCase(TestCase):
             'result': 2,
             'created_at': 1608379200.0,
         })
+
+    @freeze_time('2020-12-19T12:00:00.0000')
+    def test_time_left(self):
+        board = LeaderBoard()
+        self.assertEqual(board.time_left, 120.0)

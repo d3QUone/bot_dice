@@ -1,4 +1,6 @@
+import datetime
 import time
+import threading
 from collections import defaultdict
 from itertools import chain
 from typing import List, TypedDict, Tuple, Optional
@@ -41,12 +43,46 @@ class LeaderBoard:
         self.last_game: List[LeaderItem] = []
         self.last_day: List[LeaderItem] = []
 
+        # Какое кол-во рекордов отображать в статистике
         self.visible_leader_board = 10
+        # Длительность раунда
+        self.round_duration = datetime.timedelta(minutes=2)
+        # Сколько раундов прошло
+        self.round_counter = 0
+        # Время последнего обновления
+        self.last_update = time.time()
+
+    def run_update(self):
+        """Запустить фоновое обновление счётчиков."""
+
+        def inner():
+            while True:
+                time.sleep(self.round_duration.seconds)
+
+                self.new_round()
+                self.last_update = time.time()
+
+        t = threading.Thread(target=inner, daemon=True)
+        t.start()
+
+    @property
+    def time_left(self) -> float:
+        """Сколько времени осталось до начала нового раунда."""
+        now = time.time()
+        return self.last_update + self.round_duration.seconds - now
+
+    def user_stats(self, chat_id: int) -> int:
+        """Текущая позиция пользователя в этом раунде."""
+        pos, _ = find_user_pos(array=self.last_game, chat_id=chat_id)
+        return pos
+
+    def can_add_result(self, chat_id: int) -> bool:
+        """Может ли пользователь участвовать в текущем раунде."""
+        return self.user_stats(chat_id=chat_id) == POS_NOT_FOUND
 
     def add_result(self, chat_id: int, full_name: str, result: int) -> int:
         """Добавить результат в общую таблицу, и вернуть место пользователя в текущем раунде."""
-        old_pos, _ = find_user_pos(array=self.last_game, chat_id=chat_id)
-        if old_pos != POS_NOT_FOUND:
+        if not self.can_add_result(chat_id=chat_id):
             raise BoardUserAlreadyExists
 
         item = LeaderItem(
@@ -58,18 +94,7 @@ class LeaderBoard:
         self.last_game.append(item)
 
         self.last_game = sort_board(self.last_game)
-        pos, _ = find_user_pos(array=self.last_game, chat_id=chat_id)
-        return pos
-
-    def can_add_result(self, chat_id: int) -> bool:
-        """Может ли пользователь участвовать в текущем раунде."""
-        pos, _ = find_user_pos(array=self.last_game, chat_id=chat_id)
-        return pos == POS_NOT_FOUND
-
-    def user_stats(self, chat_id: int) -> int:
-        """Текущая позиция пользователя в этом раунде."""
-        pos, _ = find_user_pos(array=self.last_game, chat_id=chat_id)
-        return pos
+        return self.user_stats(chat_id=chat_id)
 
     def new_round(self):
         """ Новый раунд игры. Текущие результаты переносятся в суточный рекорд.
@@ -82,6 +107,8 @@ class LeaderBoard:
 
         self.last_day = sort_board([max(group, key=lambda i: i['result']) for group in games_dict.values()])
         self.last_game = []
+
+        self.round_counter += 1
 
     def abs_stats(self, array, chat_id: int = None) -> List[Tuple[int, LeaderItem]]:
         """Вернуть текущие рекорды + позицию пользователя."""

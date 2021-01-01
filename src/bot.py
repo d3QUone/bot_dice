@@ -1,6 +1,5 @@
 import logging
 import time
-import threading
 import os
 from collections import defaultdict
 from functools import wraps
@@ -49,9 +48,6 @@ class Manager:
 
         # Game rules
         self.board = LeaderBoard()
-        self.update_cycle = 0
-        self.round_duration = 2 * 60
-        self.last_update = time.time()
 
         # Runtime stats
         self.counter = 0
@@ -62,19 +58,10 @@ class Manager:
         self.func_resp_time = defaultdict(list)  # milliseconds
         self.max_list_size = 1000
 
-    def update_leader_board(self):
-        while True:
-            time.sleep(self.round_duration)
-
-            self.board.new_round()
-            self.update_cycle += 1
-            self.last_update = time.time()
-
     def run(self):
         self.set_up_commands()
 
-        t = threading.Thread(target=self.update_leader_board, daemon=True)
-        t.start()
+        self.board.run_update()
 
         executor.start_polling(
             dispatcher=self.dispatcher,
@@ -165,7 +152,6 @@ class Manager:
     @async_log_exception
     async def roll_once(self, message: types.Message):
         chat_id = message.chat.id
-        now = time.time()
 
         if not self.board.can_add_result(chat_id=chat_id):
             text = [
@@ -173,7 +159,7 @@ class Manager:
                 '',
             ]
             # Посчитать точное время
-            dt = (self.last_update + self.round_duration) - now
+            dt = self.board.time_left
             if dt < 0:
                 # Что-то не так с обновлением!
                 msg = 'Вы скоро сможете повторить!'
@@ -235,7 +221,7 @@ class Manager:
             msg = f'{msg_pos}. [[{item["full_name"]}]] {item["result"]}'
             text.append(msg)
 
-        dt = (self.last_update + self.round_duration) - time.time()
+        dt = self.board.time_left
         if dt > 0:
             text.extend([
                 '',
@@ -328,7 +314,6 @@ class Manager:
             f'- Всего запросов с момента старта: *{self.counter}*',
             f'- Всего пользователей с момента старта: *{len(self.unique_chats)}*',
             f'- Время жизни бота: {lifetime}',
-            f'- Циклов: {self.update_cycle}, last: {self.last_update}',
             '',
             '*Статистика по функциям*',
             '',
