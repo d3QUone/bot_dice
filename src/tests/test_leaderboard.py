@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest import TestCase
 
 from freezegun import freeze_time
@@ -75,3 +76,21 @@ class LeaderBoardTestCase(TestCase):
     def test_time_left(self):
         board = LeaderBoard()
         self.assertEqual(board.time_left, 120.0)
+
+    def test_result_expire(self):
+        board = LeaderBoard(
+            round_duration=timedelta(seconds=10),
+            expire_delta=timedelta(seconds=20),
+        )
+        board.add_result(chat_id=1, full_name='FUU', result=10)
+
+        # Обновить результаты
+        for _ in range(2):
+            board.new_round()
+            stats = board.total_stats()
+            self.assertEqual(len(stats), 1)
+
+        # Снова обновить результаты, в этот раз пришло время очищать результаты
+        board.new_round()
+        stats = board.total_stats()
+        self.assertEqual(len(stats), 0)

@@ -39,14 +39,16 @@ def sort_board(array: List[LeaderItem]) -> List[LeaderItem]:
 class LeaderBoard:
     """LeaderBoard представляет основную и единую логику таблицы рекордов."""
 
-    def __init__(self):
+    def __init__(self, round_duration: datetime.timedelta = None, expire_delta: datetime.timedelta = None):
         self.last_game: List[LeaderItem] = []
         self.last_day: List[LeaderItem] = []
 
         # Какое кол-во рекордов отображать в статистике
         self.visible_leader_board = 10
         # Длительность раунда
-        self.round_duration = datetime.timedelta(minutes=2)
+        self.round_duration = round_duration or datetime.timedelta(minutes=2)
+        # Срок жизни результатов
+        self.expire_delta = expire_delta or datetime.timedelta(hours=24)
         # Сколько раундов прошло
         self.round_counter = 0
         # Время последнего обновления
@@ -57,7 +59,7 @@ class LeaderBoard:
 
         def inner():
             while True:
-                time.sleep(self.round_duration.seconds)
+                time.sleep(self.round_duration.total_seconds())
 
                 self.new_round()
                 self.last_update = time.time()
@@ -69,7 +71,7 @@ class LeaderBoard:
     def time_left(self) -> float:
         """Сколько времени осталось до начала нового раунда."""
         now = time.time()
-        return self.last_update + self.round_duration.seconds - now
+        return self.last_update + self.round_duration.total_seconds() - now
 
     def user_stats(self, chat_id: int) -> int:
         """Текущая позиция пользователя в этом раунде."""
@@ -101,6 +103,11 @@ class LeaderBoard:
             Учесть что пользователь уже может быть в рекордах, и нужно выбрать
             один максимальный результат от него.
         """
+        # Проверить пришло ли время обнулять все результаты.
+        count = int(self.expire_delta.total_seconds() / self.round_duration.seconds)
+        if self.round_counter % count == 0:
+            self.last_day = []
+
         games_dict = defaultdict(list)
         for i in chain(self.last_day, self.last_game):
             games_dict[i['chat_id']].append(i)
