@@ -1,9 +1,9 @@
 import logging
 import time
-import threading
 import os
 from collections import defaultdict
 from functools import wraps
+from typing import Callable
 
 import asyncio
 import sentry_sdk
@@ -49,9 +49,6 @@ class Manager:
 
         # Game rules
         self.board = LeaderBoard()
-        self.update_cycle = 0
-        self.round_duration = 2 * 60
-        self.last_update = time.time()
 
         # Runtime stats
         self.counter = 0
@@ -62,23 +59,19 @@ class Manager:
         self.func_resp_time = defaultdict(list)  # milliseconds
         self.max_list_size = 1000
 
-    def update_leader_board(self):
-        while True:
-            time.sleep(self.round_duration)
-
-            self.board.new_round()
-            self.update_cycle += 1
-            self.last_update = time.time()
+    async def on_shutdown(self, dispatcher: Dispatcher):
+        log.debug('Dump data')
+        self.board.dump_data()
 
     def run(self):
         self.set_up_commands()
 
-        t = threading.Thread(target=self.update_leader_board, daemon=True)
-        t.start()
+        self.board.run_update()
 
         executor.start_polling(
             dispatcher=self.dispatcher,
             skip_updates=True,
+            on_shutdown=self.on_shutdown,
         )
 
     def increment_counter(self, f):
@@ -165,7 +158,6 @@ class Manager:
     @async_log_exception
     async def roll_once(self, message: types.Message):
         chat_id = message.chat.id
-        now = time.time()
 
         if not self.board.can_add_result(chat_id=chat_id):
             text = [
@@ -173,7 +165,7 @@ class Manager:
                 '',
             ]
             # Посчитать точное время
-            dt = (self.last_update + self.round_duration) - now
+            dt = self.board.time_left
             if dt < 0:
                 # Что-то не так с обновлением!
                 msg = 'Вы скоро сможете повторить!'
@@ -190,9 +182,9 @@ class Manager:
         # Roll
         rolls = [await message.answer_dice(emoji='🎳') for _ in range(3)]
 
-        val = 1
+        score = 1
         for v in rolls:
-            val *= v["dice"]["value"]
+            score *= v["dice"]["value"]
 
         # Wait for animation
         await asyncio.sleep(3)
@@ -200,11 +192,11 @@ class Manager:
         pos = self.board.add_result(
             chat_id=chat_id,
             full_name=message.chat.full_name,
-            result=val,
+            score=score,
         )
 
         text = [
-            f'Ваш результат: *{val}*',
+            f'Ваш результат: *{score}*',
             f'Прямо сейчас вы на позиции *{pos}*',
             '',
             f'Посмотреть итоги раунда: /{COMMAND_ROUND_LEADERS}',
@@ -215,10 +207,9 @@ class Manager:
             parse_mode=types.ParseMode.MARKDOWN,
         )
 
-    @async_log_exception
-    async def roll_stats_round(self, message: types.Message):
+    async def abc_roll_stats_round(self, stats_func: Callable, header: str, message: types.Message):
         chat_id = message.chat.id
-        stats = self.board.current_stats(chat_id=chat_id)
+        stats = stats_func(chat_id=chat_id)
         if not stats:
             return await message.answer(
                 text='Пока что ничего нет.',
@@ -226,20 +217,20 @@ class Manager:
             )
 
         text = [
-            '*Текущий раунд*',
+            header,
             '',
         ]
 
         for pos, item in stats:
             msg_pos = f'*{pos}*' if pos <= 3 else f'{pos}'
-            msg = f'{msg_pos}. [[{item["full_name"]}]] {item["result"]}'
+            msg = f'{msg_pos}. {item}'
             text.append(msg)
 
-        dt = (self.last_update + self.round_duration) - time.time()
+        dt = self.board.time_left
         if dt > 0:
             text.extend([
                 '',
-                f'Новый раунд через: {pretty_time_delta(dt)}',
+                f'Следующий раунд через: {pretty_time_delta(dt)}',
             ])
 
         await message.answer(
@@ -248,28 +239,19 @@ class Manager:
         )
 
     @async_log_exception
+    async def roll_stats_round(self, message: types.Message):
+        return await self.abc_roll_stats_round(
+            stats_func=self.board.current_stats,
+            header='*Текущий раунд*',
+            message=message,
+        )
+
+    @async_log_exception
     async def roll_stats_total(self, message: types.Message):
-        chat_id = message.chat.id
-        stats = self.board.total_stats(chat_id=chat_id)
-        if not stats:
-            return await message.answer(
-                text='Пока что ничего нет.',
-                parse_mode=types.ParseMode.MARKDOWN,
-            )
-
-        text = [
-            '*Лучшие результаты за всё время*',
-            '',
-        ]
-
-        for pos, item in stats:
-            msg_pos = f'*{pos}*' if pos <= 3 else f'{pos}'
-            msg = f'{msg_pos}. [[{item["full_name"]}]] {item["result"]}'
-            text.append(msg)
-
-        await message.answer(
-            text=prepare_str(text=text),
-            parse_mode=types.ParseMode.MARKDOWN,
+        return await self.abc_roll_stats_round(
+            stats_func=self.board.total_stats,
+            header='*Лучшие результаты за сутки*',
+            message=message,
         )
 
     @async_log_exception
@@ -328,7 +310,6 @@ class Manager:
             f'- Всего запросов с момента старта: *{self.counter}*',
             f'- Всего пользователей с момента старта: *{len(self.unique_chats)}*',
             f'- Время жизни бота: {lifetime}',
-            f'- Циклов: {self.update_cycle}, last: {self.last_update}',
             '',
             '*Статистика по функциям*',
             '',
