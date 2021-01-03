@@ -212,7 +212,7 @@ class Manager:
     async def abc_roll_stats_round(self, stats_func: Callable, header: str, message: types.Message):
         chat_id = message.chat.id
         stats = stats_func(chat_id=chat_id)
-        if not stats:
+        if not stats.total_users:
             return await message.answer(
                 text='Пока что ничего нет.',
                 parse_mode=types.ParseMode.MARKDOWN,
@@ -223,10 +223,15 @@ class Manager:
             '',
         ]
 
-        for pos, item in stats:
+        for pos, item in stats.array:
             msg_pos = f'*{pos}*' if pos <= 3 else f'{pos}'
             msg = f'{msg_pos}. {item}'
             text.append(msg)
+
+        text.extend([
+            '',
+            f'Всего участников: {stats.total_users}',
+        ])
 
         dt = self.board.time_left
         if dt > 0:
@@ -346,5 +351,6 @@ if __name__ == '__main__':
 
     m = Manager(
         token=TG_TOKEN,
+        sentry_token=SENTRY_TOKEN,
     )
     m.run()

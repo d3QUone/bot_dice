@@ -30,6 +30,13 @@ class LeaderItem:
         return f'[[{self.full_name}]] - *{self.score}* - {created_at}'
 
 
+@dataclass
+class LeaderStat:
+    """LeaderStat представляет общую информацию по рекордам в каком-то раунде."""
+    array: List[Tuple[int, LeaderItem]]
+    total_users: int
+
+
 POS_NOT_FOUND = -1
 
 
@@ -134,8 +141,9 @@ class LeaderBoard:
 
         self.round_counter += 1
 
-    def abs_stats(self, array, chat_id: int = None) -> List[Tuple[int, LeaderItem]]:
+    def abs_stats(self, array, chat_id: int = None) -> LeaderStat:
         """Вернуть текущие рекорды + позицию пользователя."""
+        total_users = len(array)
         leaders = array[:self.visible_leader_board]
         res = [(inx + 1, item) for inx, item in enumerate(leaders)]
 
@@ -144,10 +152,13 @@ class LeaderBoard:
             if pos != POS_NOT_FOUND and pos > self.visible_leader_board:
                 res.append((pos, us))
 
-        return res
+        return LeaderStat(
+            array=res,
+            total_users=total_users,
+        )
 
-    def total_stats(self, chat_id: int = None) -> List[Tuple[int, LeaderItem]]:
+    def total_stats(self, chat_id: int = None) -> LeaderStat:
         return self.abs_stats(array=self.last_day, chat_id=chat_id)
 
-    def current_stats(self, chat_id: int = None) -> List[Tuple[int, LeaderItem]]:
+    def current_stats(self, chat_id: int = None) -> LeaderStat:
         return self.abs_stats(array=self.last_game, chat_id=chat_id)

@@ -35,17 +35,18 @@ class LeaderBoardTestCase(TestCase):
         board.new_round()
 
         stats = board.total_stats()
-        self.assertEqual(len(stats), 2)
+        self.assertEqual(len(stats.array), 2)
+        self.assertEqual(stats.total_users, 2)
 
-        self.assertEqual(stats[0][0], 1)
-        self.assertDictEqual(asdict(stats[0][1]), {
+        self.assertEqual(stats.array[0][0], 1)
+        self.assertDictEqual(asdict(stats.array[0][1]), {
             'chat_id': 2,
             'full_name': 'F2',
             'score': 2,
             'created_at': 1608379200.0,
         })
-        self.assertEqual(stats[1][0], 2)
-        self.assertDictEqual(asdict(stats[1][1]), {
+        self.assertEqual(stats.array[1][0], 2)
+        self.assertDictEqual(asdict(stats.array[1][1]), {
             'chat_id': 1,
             'full_name': 'F1',
             'score': 1,
@@ -59,17 +60,18 @@ class LeaderBoardTestCase(TestCase):
         board.new_round()
 
         stats = board.total_stats()
-        self.assertEqual(len(stats), 2)
+        self.assertEqual(len(stats.array), 2)
+        self.assertEqual(stats.total_users, 2)
 
-        self.assertEqual(stats[0][0], 1)
-        self.assertDictEqual(asdict(stats[0][1]), {
+        self.assertEqual(stats.array[0][0], 1)
+        self.assertDictEqual(asdict(stats.array[0][1]), {
             'chat_id': 1,
             'full_name': 'FUU',
             'score': 10,
             'created_at': 1608379200.0,
         })
-        self.assertEqual(stats[1][0], 2)
-        self.assertDictEqual(asdict(stats[1][1]), {
+        self.assertEqual(stats.array[1][0], 2)
+        self.assertDictEqual(asdict(stats.array[1][1]), {
             'chat_id': 2,
             'full_name': 'F2',
             'score': 2,
@@ -95,12 +97,13 @@ class LeaderBoardTestCase(TestCase):
         for _ in range(2):
             board.new_round()
             stats = board.total_stats()
-            self.assertEqual(len(stats), 1)
+            self.assertEqual(len(stats.array), 1)
 
         # Снова обновить результаты, в этот раз пришло время очищать результаты
         board.new_round()
         stats = board.total_stats()
-        self.assertEqual(len(stats), 0)
+        self.assertEqual(len(stats.array), 0)
+        self.assertEqual(stats.total_users, 0)
 
     @freeze_time('2020-12-19T12:00:00.0000')
     def test_leader_item(self):
