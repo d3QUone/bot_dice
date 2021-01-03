@@ -18,7 +18,7 @@ poetry install
 
 2. Run bot locally:
 ```bash
-poetry run python src/bot.py
+TG_TOKEN=123 poetry run python src/bot.py
 ```
 
 
