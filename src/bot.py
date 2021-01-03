@@ -197,10 +197,12 @@ class Manager:
 
         text = [
             f'Ваш результат: *{score}*',
-            f'Прямо сейчас вы на позиции *{pos}*',
+            f'Ваша позиция в этом раунде: *{pos}*',
             '',
             f'Посмотреть итоги раунда: /{COMMAND_ROUND_LEADERS}',
             f'Посмотреть лучшие результаты: /{COMMAND_GAME_LEADERS}',
+            '',
+            f'Бросить ещё раз: /{COMMAND_ROLL}',
         ]
         await message.answer(
             text=prepare_str(text=text),
